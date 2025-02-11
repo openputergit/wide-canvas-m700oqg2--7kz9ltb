@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ExploitDB Pro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/highlight.js@11.8.0/lib/core.js"></script>
+    <link href="https://unpkg.com/highlight.js@11.8.0/styles/atom-one-dark.css" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        code { font-family: 'JetBrains Mono', monospace; }
+        .exploit-card { transition: all 0.3s ease; }
+        .exploit-card:hover { transform: translateY(-4px); box-shadow: 0 10px 20px rgba(0,0,0,0.2); }
+        .loaded-content { animation: fadeIn 0.5s ease-out; }
+        .copy-button { transition: all 0.2s ease; }
+        .copy-button:hover { transform: scale(1.05); }
+        .loader {
+            width: 48px;
+            height: 48px;
+            border: 5px solid #1E293B;
+            border-bottom-color: #3B82F6;
+            border-radius: 50%;
+            display: none;
+            animation: rotation 1s linear infinite;
+        }
+        @keyframes rotation {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .media-gallery-item { transition: transform 0.3s ease; }
+        .media-gallery-item:hover { transform: scale(1.02); }
+        .carousel { scroll-behavior: smooth; }
+    </style>
+</head>
+<body class="bg-slate-900 text-white min-h-screen">
+    <nav class="bg-slate-800 p-4 sticky top-0 z-50 shadow-lg">
+        <div class="container mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="flex items-center space-x-4">
+                <i class="bi bi-shield-lock text-3xl text-blue-500"></i>
+                <h1 class="text-2xl font-bold">ExploitDB Pro</h1>
+            </div>
+            <div class="flex flex-col md:flex-row space-y-2 md:space-y-0 md:space-x-4 w-full md:w-auto">
+                <div class="relative">
+                    <i class="bi bi-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                    <input type="search" id="searchExploit" placeholder="Search exploits..." 
+                           class="pl-10 pr-4 py-2 rounded-lg bg-slate-700 border border-slate-600 w-full md:w-64 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                </div>
+                <button class="bg-blue-600 hover:bg-blue-700 px-6 py-2 rounded-lg flex items-center justify-center space-x-2 transition-colors">
+                    <i class="bi bi-plus-lg"></i>
+                    <span>Submit Exploit</span>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container mx-auto p-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="exploitList">
+            <!-- Exploit cards will be dynamically inserted here -->
+        </div>
+        <div class="flex justify-center mt-8">
+            <div class="loader" id="loader"></div>
+        </div>
+    </main>
+
+    <!-- Enhanced Modal for viewing exploit details -->
+    <div id="exploitModal" class="fixed inset-0 bg-black bg-opacity-75 hidden backdrop-blur-sm flex items-center justify-center z-50">
+        <div class="bg-slate-800 rounded-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="sticky top-0 bg-slate-800 p-6 border-b border-slate-700 flex justify-between items-center">
+                <h2 class="text-2xl font-bold" id="modalTitle"></h2>
+                <button onclick="closeModal()" class="text-gray-400 hover:text-white p-2 rounded-full hover:bg-slate-700 transition-colors">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+            
+            <div class="p-6 space-y-6">
+                <div class="bg-slate-900 rounded-lg p-4">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-semibold">Exploit Code</h3>
+                        <button onclick="copyCode()" class="copy-button bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg flex items-center space-x-2">
+                            <i class="bi bi-clipboard"></i>
+                            <span>Copy Code</span>
+                        </button>
+                    </div>
+                    <pre><code class="language-javascript rounded-lg" id="exploitCode"></code></pre>
+                </div>
+
+                <div id="mediaSection" class="space-y-4">
+                    <h3 class="text-lg font-semibold">Media Gallery</h3>
+                    <div class="relative">
+                        <div id="mediaGallery" class="carousel flex gap-4 overflow-x-auto pb-4 snap-x">
+                            <!-- Media items will be inserted here -->
+                        </div>
+                        <button onclick="scrollGallery(-1)" class="absolute left-0 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 p-2 rounded-full hover:bg-opacity-75">
+                            <i class="bi bi-chevron-left"></i>
+                        </button>
+                        <button onclick="scrollGallery(1)" class="absolute right-0 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 p-2 rounded-full hover:bg-opacity-75">
+                            <i class="bi bi-chevron-right"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const appSlug = 'exploit-db-123456';
+        let exploits = [];
+
+        async function fetchExploits() {
+            document.getElementById('loader').style.display = 'block';
+            try {
+                const response = await fetch('https://r0c8kgwocscg8gsokogwwsw4.zetaverse.one/mongodb', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer 2jdTCZ8Ne1W9NYrGn9E23C8Cj1Y2',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        appSlug,
+                        action: 'read',
+                        collection: 'exploits'
+                    })
+                });
+                const data = await response.json();
+                exploits = data.result || generateDummyData(); // Fallback to dummy data if empty
+                renderExploits(exploits);
+            } catch (error) {
+                console.error('Error fetching exploits:', error);
+                exploits = generateDummyData();
+                renderExploits(exploits);
+            } finally {
+                document.getElementById('loader').style.display = 'none';
+            }
+        }
+
+        function generateDummyData() {
+            return Array(6).fill(null).map((_, i) => ({
+                _id: `exploit${i}`,
+                title: `Sample Exploit ${i + 1}`,
+                description: 'A sophisticated exploit demonstrating vulnerability in system architecture',
+                category: ['Remote Code Execution', 'Buffer Overflow', 'SQL Injection'][i % 3],
+                date: new Date(Date.now() - Math.random() * 10000000000).toISOString(),
+                code: `function exploit() {
+    const target = document.querySelector('.vulnerable');
+    const payload = btoa(String.fromCharCode(0x90).repeat(32));
+    return Buffer.from(payload).toString('hex');
+}`,
+                media: [
+                    { type: 'image', url: `https://picsum.photos/seed/${i}/800/600` },
+                    { type: 'video', url: 'https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/360/Big_Buck_Bunny_360_10s_1MB.mp4' }
+                ]
+            }));
+        }
+
+        function renderExploits(exploits) {
+            const container = document.getElementById('exploitList');
+            container.innerHTML = exploits.map(exploit => `
+                <div class="exploit-card bg-slate-800 p-6 rounded-xl cursor-pointer loaded-content" onclick="showExploitDetails('${exploit._id}')">
+                    <div class="flex justify-between items-start mb-4">
+                        <h3 class="font-bold text-lg">${exploit.title}</h3>
+                        <span class="bg-blue-600 px-3 py-1 rounded-full text-xs">${exploit.category}</span>
+                    </div>
+                    <p class="text-gray-400 text-sm mb-4">${exploit.description}</p>
+                    <div class="flex items-center space-x-2 text-sm text-gray-400">
+                        <i class="bi bi-calendar3"></i>
+                        <span>${new Date(exploit.date).toLocaleDateString()}</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function showExploitDetails(id) {
+            const exploit = exploits.find(e => e._id === id);
+            if (!exploit) return;
+
+            document.getElementById('modalTitle').textContent = exploit.title;
+            const codeElement = document.getElementById('exploitCode');
+            codeElement.textContent = exploit.code;
+            hljs.highlightElement(codeElement);
+            
+            const gallery = document.getElementById('mediaGallery');
+            gallery.innerHTML = (exploit.media || []).map(media => `
+                <div class="media-gallery-item snap-center min-w-[300px] w-[300px]">
+                    ${media.type === 'image' 
+                        ? `<img src="${media.url}" alt="Exploit media" class="rounded-lg w-full h-48 object-cover">` 
+                        : `<video src="${media.url}" controls class="rounded-lg w-full h-48 object-cover"></video>`
+                    }
+                </div>
+            `).join('');
+
+            document.getElementById('exploitModal').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('exploitModal').classList.add('hidden');
+        }
+
+        function copyCode() {
+            const code = document.getElementById('exploitCode').textContent;
+            navigator.clipboard.writeText(code).then(() => {
+                const copyBtn = document.querySelector('.copy-button');
+                copyBtn.innerHTML = '<i class="bi bi-check"></i><span>Copied!</span>';
+                setTimeout(() => {
+                    copyBtn.innerHTML = '<i class="bi bi-clipboard"></i><span>Copy Code</span>';
+                }, 2000);
+            });
+        }
+
+        function scrollGallery(direction) {
+            const gallery = document.getElementById('mediaGallery');
+            const scrollAmount = 300 * direction;
+            gallery.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+        }
+
+        document.getElementById('searchExploit').addEventListener('input', (e) => {
+            const searchTerm = e.target.value.toLowerCase();
+            const filtered = exploits.filter(exploit => 
+                exploit.title.toLowerCase().includes(searchTerm) || 
+                exploit.description.toLowerCase().includes(searchTerm) ||
+                exploit.category.toLowerCase().includes(searchTerm)
+            );
+            renderExploits(filtered);
+        });
+
+        // Initial load
+        fetchExploits();
+
+        // Close modal when clicking outside
+        document.getElementById('exploitModal').addEventListener('click', (e) => {
+            if (e.target === e.currentTarget) closeModal();
+        });
+
+        // Escape key to close modal
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeModal();
+        });
+    </script>
+<script>document.body.addEventListener('wheel', e => { if (!e.ctrlKey) return; e.preventDefault(); return }, { passive: false })</script>
+	</body>
+</html>
